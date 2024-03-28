@@ -2,11 +2,14 @@ import React, { useState, useEffect } from "react";
 import "./App.css";
 import { ReactComponent as DeleteIcon } from "./components/Delete.svg";
 import { ReactComponent as Editicon } from "./components/Edit.svg";
+import mongoose from "mongoose";
 
 function App() {
   const [data, setData] = useState([]);
+  const [newId, setNewId] = useState("");
+  console.log(newId);
   const [formdata, setFormdata] = useState({
-    name: "", 
+    name: "",
     email: "",
     password: "",
   });
@@ -17,6 +20,7 @@ function App() {
   const savedata = async (e) => {
     e.preventDefault();
     const payload = {
+      _id: new mongoose.Types.ObjectId(),
       username: formdata.name,
       email: formdata.email,
       password: formdata.password,
@@ -24,7 +28,7 @@ function App() {
     // console.log(payload);
     const api = "http://localhost:5000/submit";
     try {
-       const response =await fetch(api, {
+      const response = await fetch(api, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -33,9 +37,7 @@ function App() {
       });
 
       if (response.ok) {
-
         setData([...data, payload]);
-
         setFormdata({
           name: "",
           email: "",
@@ -44,8 +46,53 @@ function App() {
       } else {
         console.error("Failed to save data");
       }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
+  // edit request
+  const updatedata = async (e) => {
+    e.preventDefault();
+    const payload = {
+      _id: newId,
+      username: formdata.name,
+      email: formdata.email,
+      password: formdata.password,
+    };
+    // console.log(payload);
+    const api = "http://localhost:5000/update";
+    try {
+      const response = await fetch(api, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
+      if (response.ok) {
+        setData(
+          data.map((item) =>
+            item._id === newId
+              ? {
+                  ...item,
+                  username: payload.username,
+                  email: payload.email,
+                  password: payload.password,
+                }
+              : item
+          )
+        );
+
+        setFormdata({
+          name: "",
+          email: "",
+          password: "",
+        });
+      } else {
+        console.error("Failed to update data");
+      }
     } catch (error) {
       console.error(error);
     }
@@ -60,16 +107,42 @@ function App() {
           "Content-Type": "application/json",
         },
       });
-      setData([])
-      setFormdata({
-        name: "",
-        email: "",
-        password: "",
-      });
-
+      setData([]);
     } catch (error) {
       console.error(error);
     }
+  };
+
+  //delete one request
+  const deleteOne = async (id) => {
+    const api = "http://localhost:5000/deleteone";
+    try {
+      await fetch(api, {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json",
+        },
+        body: JSON.stringify({ id }),
+      });
+      // setData([])
+      setData(data.filter((item) => item._id !== id));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  //edit one
+  const handleEditClick = async (id) => {
+    console.log(id);
+
+    setNewId(id);
+    const edit = data.find((data) => id === data._id);
+    console.log(edit);
+    setFormdata({
+      name: edit.username,
+      email: edit.email,
+      password: edit.password,
+    });
   };
 
   const getdata = async () => {
@@ -96,10 +169,8 @@ function App() {
 
   return (
     <>
-
-    
       <form className="container form my-3">
-        <h1>FACEBOOK</h1>
+        <h1>LOGIN</h1>
         <div className="form-group">
           <label htmlFor="name">Name</label>
           <input
@@ -143,13 +214,14 @@ function App() {
         >
           Submit
         </button>
-        {/* <button
+
+        <button
           type="submit"
-          className="btn btn-danger my-2 mx-2"
-          onClick={deleted}
+          className="btn btn-primary my-2 mx-2"
+          onClick={updatedata}
         >
-          Delete
-        </button> */}
+          Update
+        </button>
       </form>
       <div className="container">
         <table className="table table-striped">
@@ -160,22 +232,25 @@ function App() {
               <th scope="col">Email</th>
               <th scope="col">Password</th>
               <th scope="col"></th>
-              <th scope="col"><DeleteIcon onClick ={deleted} /> </th>
-
-              
+              <th scope="col">
+                <DeleteIcon onClick={deleted} />{" "}
+              </th>
             </tr>
           </thead>
           <tbody>
             {data?.map((item, index) => {
               return (
                 <tr key={index}>
-                  <th scope="row">{index+1}</th>
+                  <th>{index + 1}</th>
                   <td>{item.username}</td>
                   <td>{item.email}</td>
                   <td>{item.password}</td>
-                  <td><Editicon /></td>
-                  <td><DeleteIcon /></td>
-
+                  <td>
+                    <Editicon onClick={() => handleEditClick(item._id)} />
+                  </td>
+                  <td>
+                    <DeleteIcon onClick={() => deleteOne(item._id)} />
+                  </td>
                 </tr>
               );
             })}
